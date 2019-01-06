@@ -12,6 +12,25 @@ matplotlib.use("TkAgg")
 
 
 def clean_data(df, type_dict):
+    """
+    Coerces the columns of df to match the definitions laid out in type_dict.
+
+    :param df: a pandas dataframe
+    :param type_dict: a dictionary with three keys that each contain a list of variable name
+
+    type_dict['date_vars'] - contains a list of the names of variables that should be coerced
+    to datetimes. The format should be '2000-01-31'.
+
+    type_dict['float_vars'] - contains a list of the names of variables that should be coerced
+    into floats.
+
+    type_dict['int_vars'] - contains a list of the names of variables that should be coerced
+    into ints.
+
+    If the coercion is unsuccessful, a NaN is placed instead.
+
+    :return:the dataframe with the new coerced values
+    """
     print('Cleaning date variables:')
     for v in type_dict['date_vars']:
         print(v)
@@ -33,6 +52,15 @@ def clean_data(df, type_dict):
     return df
 
 def check_unique(dataframe, identifier_list):
+    """
+    Verifies that dataframe is uniquely identified by the variables in identifier_list
+    :param dataframe: a pandas dataframe
+    :param identifier_list: a list of variable names. Must be contained in either the index
+    or the variables of dataframe
+    :return: a dataframe of identifiers that are not uniquely identified along with the counts of
+    how many times they occurred. If the dataframe is uniquely identified, the function returns
+    an empty dataframe
+    """
     unique_identifier = dataframe.groupby(by = identifier_list).count().iloc[:, 0]
     unique_identifier.name = 'Count'
     unique_identifier = unique_identifier[unique_identifier > 1]
@@ -41,7 +69,8 @@ def check_unique(dataframe, identifier_list):
 def continuous_index(company_dataframe, num_months = 1):
     """
     Detects if a company has continuous return data. Returns "True" if the returns are continuous. False otherwise
-    :param company_dataframe -- a dataframe from a groupby object, indexed on Permco
+    :param company_dataframe -- a dataframe from a groupby object, indexed on Permco and the time variable at level 2
+    :param num_months -- the maximum number of months between timestamps
     :returns True or False, depending on whether the return sequence is continuous
     """
     times = company_dataframe.index.get_level_values(1)
