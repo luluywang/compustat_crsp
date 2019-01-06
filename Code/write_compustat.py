@@ -114,17 +114,23 @@ print_message('Converting yearly to quarterly data')
 yearly_variables = sorted([compustat_names[x] for x in list(compustat_names.keys()) if x[-1] == 'y'])
 
 compustat = compustat.reset_index().set_index(['Permco', 'Fiscal Year'])
-cashflow_groups = compustat[yearly_variables].groupby(['Permco', 'Fiscal Year'])
+compustat['Group Number'] = compustat.groupby(['Permco', 'Fiscal Year']).ngroup()
+print('Maximum Group Number: ' + str(compustat['Group Number'].max()))
+compustat = compustat.reset_index().set_index(['Permco', 'Fiscal Year', 'Group Number'])
+cashflow_groups = compustat[yearly_variables].groupby(['Permco', 'Fiscal Year', 'Group Number'])
 
-def take_diffs(x):
+
+def take_diffs(x, var_type):
     """
     Takes a Series of a "year to date" variable and converts it into a quarterly variable
 
     param x: a Series of a year to date variable, e.g. capex year to date
     :return: a Series of the quarterly variable
     """
-    if x.name[1] == 2000:
-        print(x.name)
+
+    group_number = x.name[2]
+    if group_number % 10000 == 0:
+        print(var_type + ': ' + str(group_number))
 
     if all(np.isnan(x)):
         return x
@@ -135,8 +141,7 @@ def take_diffs(x):
     return ret
 
 def cash_flow(variable):
-    print(variable)
-    return cashflow_groups[variable].transform(take_diffs)
+    return cashflow_groups[variable].transform(take_diffs, var_type = variable)
 
 with Pool(4) as p:
     new_dataframes = p.map(cash_flow, yearly_variables)
@@ -145,6 +150,8 @@ print_message('Finished parallel process')
 # Assign the new variables
 for d in new_dataframes:
     compustat[d.name] = d
+compustat = compustat.reset_index().set_index(['Permco', 'datadate'])
+compustat = compustat.drop(['Group Number'], axis = 1)
 
 # Make some variables
 print('Making features')
