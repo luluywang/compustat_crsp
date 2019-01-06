@@ -48,7 +48,6 @@ def continuous_index(company_dataframe, num_months = 1):
     diffs = times.shift(1, freq = 'M') - times
     return (diffs.max().total_seconds() < 32 * num_months * 24 * 60 * 60)
 
-
 def print_message(text):
     print('=====' + text + ' (' + str(datetime.now()) + ') =====')
 

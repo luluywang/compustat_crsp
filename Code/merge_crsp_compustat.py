@@ -21,4 +21,4 @@ merged = crsp.join(compustat, how = 'left', lsuffix = '.crsp', rsuffix = '.comp'
 
 print_message('Filling NAs')
 merged = merged.groupby(by = ['Permco']).fillna(method = 'ffill')
-pd.to_hdf('../Output/merged.h5', key = 'merged')
+merged.to_hdf('../Output/merged.h5', key = 'merged')

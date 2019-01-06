@@ -18,7 +18,7 @@ from multiprocessing import Pool, cpu_count
 
 ################ Import Data ################
 print_message('Loading Data')
-compustat_raw = pd.read_csv('../Data/compustat-merged.txt', sep = '\t', low_memory = False)#, nrows = 1000)
+compustat_raw = pd.read_csv('../Data/compustat-merged.txt', sep = '\t', low_memory = False)#, nrows = 10000)
 
 ################ Types ################
 print_message('Defining Types')
