@@ -21,7 +21,7 @@ print_message('Loading Data')
 crsp_raw = pd.read_csv('../Data/crsp.txt', sep = '\t', low_memory = False)#, nrows = 10000)
 
 # Filter down to only common shares
-crsp_raw = crsp_raw.loc[np.floor(crsp_raw['SHRCD'] / 10) == 1]
+crsp_raw = crsp_raw.loc[(crsp_raw['SHRCD'] == 10) | (crsp_raw['SHRCD'] == 11)]
 
 print('Data Size:')
 print(crsp_raw.shape)
