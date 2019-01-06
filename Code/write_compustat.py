@@ -138,11 +138,13 @@ def cash_flow(variable):
 with Pool(4) as p:
     new_dataframes = p.map(cash_flow, yearly_variables)
 
+print_message('Finished parallel process')
 # Assign the new variables
 for d in new_dataframes:
     compustat[d.name] = d
 
 # Make some variables
+print('Making features')
 compustat['Market Cap (Compustat)'] = compustat['Price (Compustat)'] * \
                                       compustat['Shares Outstanding (Compustat)'] / 1e3
 compustat['Shareholder Equity, Total'] = np.select(compustat['Shareholder Equity, Total'].isnull(), \
@@ -163,7 +165,4 @@ assert(discontinuous_returns.shape[0] == 0)
 
 ################ Outputting Data ################
 print_message('Outputting Data')
-print(compustat.head())
-store = pd.HDFStore('../Output/compustat.h5')
-store.put('compustat', compustat)
-store.close()
+compustat.to_hdf('../Output/compustat.h5', 'compustat'
