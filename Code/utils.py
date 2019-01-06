@@ -1,6 +1,7 @@
 import pandas as pd
 from pandas.tseries.offsets import MonthEnd
 import matplotlib
+from datetime import datetime
 matplotlib.use("TkAgg")
 # import numpy as np
 # import seaborn as sns
@@ -49,4 +50,4 @@ def continuous_index(company_dataframe, num_months = 1):
 
 
 def print_message(text):
-    print('=====' + text + '=====')
+    print('=====' + text + ' (' + str(datetime.now()) + ') =====')
