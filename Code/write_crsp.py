@@ -1,3 +1,14 @@
+"""
+Description: Cleans the crsp database to only include entries with valid returns and
+so that every stock is uniquely identified by Permco-datadate.
+
+
+I rename some variables, and collapse share classes. In the combined share classes, I
+add up the market cap of each share class to get to the total market cap of that
+company at that time. Returns are also computed as market cap weighted returns of the
+individual share classes.
+"""
+
 # Custom functions for data cleaning
 from utils import *
 
