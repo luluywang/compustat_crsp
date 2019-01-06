@@ -16,6 +16,10 @@ from utils import *
 ################ Import Data ################
 print_message('Loading Data')
 crsp_raw = pd.read_csv('../Data/crsp.txt', sep = '\t', low_memory = False)#, nrows = 10000)
+
+# Filter down to only common shares
+crsp_raw = crsp_raw.loc[np.floor(crsp_raw['SHRCD'] / 10) == 1]
+
 print('Data Size:')
 print(crsp_raw.shape)
 print(str(crsp_raw.shape[0] * crsp_raw.shape[1]) + ' observations')
@@ -46,6 +50,7 @@ crsp_names = {'RET': 'Return',
 
 crsp = crsp.rename(index = str, columns = crsp_names)
 crsp = crsp[list(crsp_names.values())]
+
 
 # Make a few more useful variables
 print_message('Create new features')
@@ -146,7 +151,4 @@ assert(discontinuous_returns.shape[0] == 0)
 
 ################
 print_message('Outputting Data')
-print(crsp_merge.head())
-store = pd.HDFStore('../Output/crsp.h5')
-store.put('crsp', crsp_merge)
-store.close()
+crsp_merge.to_hdf('../Output/crsp.h5', 'crsp')
