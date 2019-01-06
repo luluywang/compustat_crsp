@@ -28,7 +28,7 @@ print(str(crsp_raw.shape[0] * crsp_raw.shape[1]) + ' observations')
 print_message('Setting Types')
 crsp_datatypes = {'date_vars': ['date'],
                  'float_vars': ['BIDLO', 'ASKHI', 'PRC', 'RET', 'DLRET', 'BID', 'ASK', 'RETX', 'CFACPR', 'CFACSHR'],
-                 'int_vars': ['PERMNO', 'PERMCO', 'HSICCD', 'CUSIP', 'SHROUT', 'VOL']}
+                 'int_vars': ['PERMNO', 'PERMCO', 'HSICCD', 'CUSIP', 'SHROUT', 'VOL', 'EXCHCD']}
 crsp = clean_data(copy(crsp_raw), crsp_datatypes)
 
 ################ Setting Types ################
@@ -36,6 +36,7 @@ print_message('Renaming Variables')
 crsp_names = {'RET': 'Return',
               'SHROUT': 'Shares Outstanding on Trading Day',
               'COMNAM': 'Company Name',
+              'EXCHCD': 'Exchange Code',
               'TICKER': 'Ticker',
               'date': 'datadate',
               'PERMNO': 'Permno',
@@ -64,7 +65,7 @@ crsp = crsp.drop(['Price on Trading Day', 'Shares Outstanding on Trading Day', '
 
 ################
 print_message('Aggregating share classes')
-AGG_VAR_TYPES = {'First': ['Company Name', 'Permno', 'Ticker', 'Price', 'Bid', 'Ask'],
+AGG_VAR_TYPES = {'First': ['Company Name', 'Permno', 'Ticker', 'Price', 'Bid', 'Ask', 'Exchange Code'],
                  'Add': ['Market Cap (Billions, CRSP)'],
                  'Weighted Sum': ['Volume', 'Return']}
 ALL_CRSP_VAR = [item for sublist in AGG_VAR_TYPES.values() for item in sublist]
