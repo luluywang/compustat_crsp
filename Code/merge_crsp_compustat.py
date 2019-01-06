@@ -17,8 +17,8 @@ compustat = pd.read_hdf('../Output/compustat.h5')
 compustat_variables = compustat.columns.tolist()
 
 print_message('Merging')
-merged = crsp.join(compustat, how = 'left')
+merged = crsp.join(compustat, how = 'left', lsuffix = '.crsp', rsuffix = '.comp')
 
 print_message('Filling NAs')
-merged[compustat_variables] = merged[compustat_variables].groupby(by = ['Permco']).fillna(method = 'ffill')
+merged = merged.groupby(by = ['Permco']).fillna(method = 'ffill')
 pd.to_hdf('../Output/merged.h5', key = 'merged')

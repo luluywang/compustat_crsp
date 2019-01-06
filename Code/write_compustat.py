@@ -12,6 +12,9 @@ Last Updated: Jan 5, 2018
 
 # Custom functions
 from utils import *
+import numpy as np
+from copy import copy
+from multiprocessing import Pool, cpu_count
 
 ################ Import Data ################
 print_message('Loading Data')
@@ -165,4 +168,4 @@ assert(discontinuous_returns.shape[0] == 0)
 
 ################ Outputting Data ################
 print_message('Outputting Data')
-compustat.to_hdf('../Output/compustat.h5', 'compustat'
+compustat.to_hdf('../Output/compustat.h5', 'compustat')
