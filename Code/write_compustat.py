@@ -18,7 +18,7 @@ from multiprocessing import Pool, cpu_count
 
 ################ Import Data ################
 print_message('Loading Data')
-compustat_raw = pd.read_csv('../Data/compustat-merged.txt', sep = '\t', low_memory = False)#, nrows = 10000)
+compustat_raw = pd.read_csv('../Data/compustat-merged.txt', sep = '\t', low_memory = False)#, nrows = 1000)
 
 ################ Types ################
 print_message('Defining Types')
@@ -113,10 +113,10 @@ assert(duplicated_values.shape[0] == 0)
 print_message('Converting yearly to quarterly data')
 yearly_variables = sorted([compustat_names[x] for x in list(compustat_names.keys()) if x[-1] == 'y'])
 
-compustat = compustat.reset_index().set_index(['Permco', 'Fiscal Year'])
+compustat = compustat.safe_index(['Permco', 'Fiscal Year'])
 compustat['Group Number'] = compustat.groupby(['Permco', 'Fiscal Year']).ngroup()
 print('Maximum Group Number: ' + str(compustat['Group Number'].max()))
-compustat = compustat.reset_index().set_index(['Permco', 'Fiscal Year', 'Group Number'])
+compustat = compustat.safe_index(['Permco', 'Fiscal Year', 'Group Number'])
 cashflow_groups = compustat[yearly_variables].groupby(['Permco', 'Fiscal Year', 'Group Number'])
 
 
@@ -150,7 +150,7 @@ print_message('Finished parallel process')
 # Assign the new variables
 for d in new_dataframes:
     compustat[d.name] = d
-compustat = compustat.reset_index().set_index(['Permco', 'datadate'])
+compustat = compustat.safe_index(['Permco', 'datadate'])
 compustat = compustat.drop(['Group Number'], axis = 1)
 
 # Make some variables
@@ -164,7 +164,7 @@ compustat['Shareholder Equity, Total'] = np.select(compustat['Shareholder Equity
 compustat['Book Equity'] = compustat['Shareholder Equity, Total'] + compustat['Deferred Tax Assets'] - compustat['Preferred Equity, Total']
 
 ################ Data Integrity ################
-compustat = compustat.reset_index().set_index(['Permco', 'datadate'])
+compustat = compustat.safe_index(['Permco', 'datadate'])
 
 # Check that dates are contiguous
 valid_returns = compustat.groupby(by = ['Permco']).apply(continuous_index)

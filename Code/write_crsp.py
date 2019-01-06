@@ -135,7 +135,7 @@ crsp_merge = crsp_merge.loc[~pd.isnull(crsp_merge['Return'])]
 
 #######
 print_message('Verifying data integrity')
-crsp_merge = crsp_merge.reset_index().set_index(['Permco', 'datadate'])
+crsp_merge = crsp_merge.safe_index(['Permco', 'datadate'])
 
 # Check final assumptions on the data
 # 1. Permco + datadate uniquely identify each observation

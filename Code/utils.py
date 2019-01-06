@@ -51,3 +51,14 @@ def continuous_index(company_dataframe, num_months = 1):
 
 def print_message(text):
     print('=====' + text + ' (' + str(datetime.now()) + ') =====')
+
+def safe_index(self, variable_list):
+    """
+    Function that makes setting an index easier. Often times the existing index
+    already contains some variables.
+    :param self: a Pandas dataframe
+    :param variable_list: a list of strings containing the new index names
+    :return:
+    """
+    return self.reset_index().set_index(variable_list)
+pd.DataFrame.safe_index = safe_index
