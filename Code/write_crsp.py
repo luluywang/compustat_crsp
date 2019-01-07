@@ -13,7 +13,6 @@ individual share classes.
 from utils import *
 import numpy as np
 from copy import copy
-from multiprocessing import Pool, cpu_count
 
 # Proper data cleaning
 ################ Import Data ################
@@ -55,8 +54,7 @@ crsp_names = {'RET': 'Return',
 crsp = crsp.rename(index = str, columns = crsp_names)
 crsp = crsp[list(crsp_names.values())]
 
-
-# Make a few more useful variables
+# Make a few fundamental variables
 print_message('Create new features')
 crsp['Imputed Price'] = (crsp['Price with Flag'] < 0)
 crsp['Price on Trading Day'] = np.abs(crsp['Price with Flag'])
@@ -70,7 +68,9 @@ crsp = crsp.drop(['Price on Trading Day', 'Shares Outstanding on Trading Day', '
 print_message('Aggregating share classes')
 AGG_VAR_TYPES = {'First': ['Company Name', 'Permno', 'Ticker', 'Price', 'Bid', 'Ask', 'Exchange Code'],
                  'Add': ['Market Cap (Billions, CRSP)'],
-                 'Weighted Sum': ['Volume', 'Return']}
+                 'Market Cap Weighted Sum': ['Return'],
+                 'Price Weighted Sum': ['Volume']}
+
 ALL_CRSP_VAR = [item for sublist in AGG_VAR_TYPES.values() for item in sublist]
 
 def agg_share_classes(company_on_date):
@@ -81,10 +81,6 @@ def agg_share_classes(company_on_date):
     :param company_on_date - a dataframe from a pandas groupby object with all the variables inside ALL_CRSP_VAR
     :return a dataframe with one row that has all the variables in ALL_CRSP_VAR, agrgregated across the share classes
     """
-
-    if ('Loop Number' in company_on_date.columns) and company_on_date['Loop Number'].values[0] % 1000 == 0:
-        print('Group: ' + str(company_on_date['Loop Number'].values[0]) + ' | ' + str(company_on_date.index[0]))
-
     # If only one share class
     if company_on_date.shape[1] <= 1:
         return company_on_date[ALL_CRSP_VAR]
@@ -97,13 +93,23 @@ def agg_share_classes(company_on_date):
     for v in AGG_VAR_TYPES['Add']:
         new_frame[v] = company_on_date[v].fillna(0).sum()
 
-    for v in AGG_VAR_TYPES['Weighted Sum']:
+    for v in AGG_VAR_TYPES['Market Cap Weighted Sum']:
         valid = ~company_on_date[v].isnull()
         denominator = company_on_date.loc[valid, 'Market Cap (Billions, CRSP)'].sum()
 
         if denominator > 0:
             new_frame[v] = (company_on_date.loc[valid, v] * company_on_date.loc[
                 valid, 'Market Cap (Billions, CRSP)']).sum() / denominator
+        else:
+            new_frame[v] = company_on_date[v][0]
+
+    for v in AGG_VAR_TYPES['Price Weighted Sum']:
+        valid = ~company_on_date[v].isnull()
+        denominator = new_frame['Price']
+
+        if denominator > 0:
+            new_frame[v] = (company_on_date.loc[valid, v] * company_on_date.loc[
+                valid, 'Price']).sum() / denominator
         else:
             new_frame[v] = company_on_date[v][0]
 
@@ -119,12 +125,7 @@ problem_children = crsp_merge.loc[~pd.isnull(crsp_merge['Count']), ALL_CRSP_VAR]
 
 if problem_children.shape[0] > 0:
     good_children = crsp_merge.loc[pd.isnull(crsp_merge['Count']), ALL_CRSP_VAR]
-
-    # Apply the function only on the problem observations
-    problem_children['Loop Number'] = list(range(problem_children.shape[0]))
-    print('Total Groups: ' + str(problem_children.shape[0]))
-    merged_problems = problem_children.groupby(by = ['Permco', 'datadate']).apply(agg_share_classes)
-    print(merged_problems.head())
+    merged_problems = parallel_apply(problem_children, ['Permco', 'datadate'], agg_share_classes, cpu_count(), 10000)
     merged_problems = merged_problems[ALL_CRSP_VAR]
 
     # Combine the dataframes together again
@@ -143,11 +144,13 @@ crsp_merge = crsp_merge.safe_index(['Permco', 'datadate'])
 
 # Unique identification
 duplicated_values = check_unique(crsp_merge, ['Permco', 'datadate'])
+print('Duplicated permco-date pairs')
 print(duplicated_values)
 assert(duplicated_values.shape[0] == 0)
 
 # Continuity of returns
-valid_returns = crsp_merge.groupby(by = ['Permco']).apply(continuous_index)
+# valid_returns = crsp_merge.groupby(by = ['Permco']).apply(continuous_index)
+valid_returns = parallel_apply(crsp_merge, ['Permco'], continuous_index, cpu_count(), 10000)
 discontinuous_returns = valid_returns.loc[~valid_returns]
 print('Companies without continuous returns')
 print(discontinuous_returns)

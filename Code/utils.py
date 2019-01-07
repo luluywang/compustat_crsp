@@ -3,12 +3,12 @@ from pandas.tseries.offsets import MonthEnd
 import matplotlib
 from datetime import datetime
 matplotlib.use("TkAgg")
-# import numpy as np
+from multiprocess import Pool, cpu_count
+import numpy as np
 # import seaborn as sns
 # import matplotlib.pyplot as plt
 # import scipy as sci
 # from copy import copy
-# from multiprocessing import Pool, cpu_count
 
 
 def clean_data(df, type_dict):
@@ -90,3 +90,83 @@ def safe_index(self, variable_list):
     """
     return self.reset_index().set_index(variable_list)
 pd.DataFrame.safe_index = safe_index
+
+def safe_drop(self, variable_list, **kwargs):
+    safe_variables = list(set(self.columns) & set(variable_list))
+    return self.drop(columns = safe_variables, **kwargs)
+pd.DataFrame.safe_drop = safe_drop
+
+
+def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
+    """
+    A lightweight version of apply using the multiprocess library
+
+    :param df: the pandas dataframe that needs to be grouped
+    :param group_list: a list of variable names to group by
+    :param f: the function to apply to each group
+    :param num_cores: the number of cores to use
+    :param print_every_n: a message will be printed every print_every_n groups processed by
+    each core. If print_every_n = None, then no messages will be printed
+
+    :return: a dataframe that has had the apply function done on it
+
+    Usage:
+
+    NUM_GROUPS = 10000
+    SIZE_OF_GROUP = 4
+    N = NUM_GROUPS * SIZE_OF_GROUP
+    df_one_group = pd.DataFrame({'g1': np.random.randint(low = 1, high = NUM_GROUPS, size = N),
+                                'data': np.random.random(N) - 0.5})
+
+    def slow_max(d):
+        ret = d.sort_values(['data'], ascending = False)
+        return ret.iloc[0, :]
+
+    par = parallel_apply(df_one_group, ['g1'], slow_max, 4).head()
+    serial = df_one_group.groupby(['g1']).apply(slow_max).head()
+    assert(np.all(par['data'].values == serial['data'].values))
+    """
+
+
+    # Cut up the dataframes into a list
+    num_cores = int(num_cores)
+    group_numbers = df.groupby(by=group_list).ngroup()
+    group_cuts = group_numbers.quantile(np.linspace(0, 1, num = num_cores + 1), interpolation='nearest').values
+    df['_Group'] = group_numbers
+
+    if print_every_n != None:
+        print('Total of ' + str(group_cuts[-1]) + ' groups')
+
+    cuts = []
+    for ind in range(num_cores - 1):
+        cuts.append(
+            df.loc[(group_numbers >= group_cuts[ind]) & (group_numbers < group_cuts[ind + 1])].groupby(group_list))
+    cuts.append(df.loc[(group_numbers >= group_cuts[num_cores - 1]) & (group_numbers <= group_cuts[num_cores])].groupby(
+        group_list))
+
+    # Define functions to be passed to parallel process
+    def verbose_function(dataframe):
+        curr = dataframe['_Group'].values[0]
+        if curr % print_every_n == 0:
+            print('Group: ' + str(curr))
+        return f(dataframe)
+
+    def verbose_func_to_apply(group_by_object):
+        return group_by_object.apply(verbose_function)
+
+    def silent_func_to_apply(group_by_object):
+        return group_by_object.apply(f)
+
+    with Pool(num_cores) as p:
+        if print_every_n != None:
+            parallel_results = p.map(verbose_func_to_apply, cuts)
+        else:
+            parallel_results = p.map(silent_func_to_apply, cuts)
+
+    ret = pd.concat(parallel_results)
+
+    df.safe_drop(['_Group'], inplace = True)
+    ret.safe_drop(['_Group'], inplace = True)
+
+    return ret
+
