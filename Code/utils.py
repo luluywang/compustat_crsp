@@ -127,11 +127,10 @@ def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
     assert(np.all(par['data'].values == serial['data'].values))
     """
 
-
     # Cut up the dataframes into a list
     num_cores = int(num_cores)
     group_numbers = df.groupby(by=group_list).ngroup()
-    group_cuts = group_numbers.quantile(np.linspace(0, 1, num = num_cores + 1), interpolation='nearest').values
+    group_cuts = group_numbers.quantile(np.linspace(0, 1, num=num_cores + 1), interpolation='nearest').values
     df['_Group'] = group_numbers
 
     if print_every_n != None:
@@ -164,10 +163,10 @@ def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
             parallel_results = p.map(silent_func_to_apply, cuts)
 
     ret = pd.concat(parallel_results)
+    df.safe_drop(['_Group'], inplace=True)
 
-    df.safe_drop(['_Group'], inplace = True)
-    if len(ret.shape) > 1:
-        ret.safe_drop(['_Group'], inplace = True)
+    if len(ret.shape) > 1:  # The case when returning a series
+        ret.safe_drop(['_Group'], inplace=True)
 
     return ret
 

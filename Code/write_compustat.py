@@ -92,10 +92,11 @@ compustat = compustat.set_index(['Permco', 'datadate'])
 
 print_message('Generating Unique Identifiers')
 def select_least_missing(dataframe):
+    dataframe.safe_drop(['_Group'], inplace = True) # Addition to make it work well with the parallel process
     dataframe['Missing Count'] = dataframe.isnull().sum(axis = 1)
     dataframe.sort_values(by = ['Missing Count'], ascending = True, inplace = True)
     return dataframe.iloc[0, :]
-compustat = parallel_apply(compustat, ['Permco', 'datadate'], select_least_missing, cpu_count(), 10000)
+compustat = parallel_apply(compustat, ['Permco', 'datadate'], select_least_missing, 2, 10000)
 
 ################ Reshaping the Annual Data ################
 print_message('Converting yearly to quarterly data')
@@ -118,28 +119,15 @@ def take_diffs(x):
     return ret
 
 def take_diff_across_columns(dataframe):
+    dataframe.safe_drop(['_Group'], inplace = True) # Addition to make it work well with the parallel process
     ret = dataframe.transform(take_diffs)
     return ret
 
 compustat = compustat.safe_index(['Permco', 'datadate', 'Fiscal Year'])
 compustat_yearly = compustat.loc[:, yearly_variables]
-compustat_yearly = parallel_apply(compustat_yearly, ['Permco', 'Fiscal Year'], take_diff_across_columns, cpu_count(), 10000)
+compustat_yearly = parallel_apply(compustat_yearly, ['Permco', 'Fiscal Year'], take_diff_across_columns, 2, None)
 compustat[yearly_variables] = compustat_yearly
 print_message('Finished parallel process')
-
-# compustat = compustat.safe_index(['Permco', 'Fiscal Year'])
-# compustat['Group Number'] = compustat.groupby(['Permco', 'Fiscal Year']).ngroup()
-# print('Maximum Group Number: ' + str(compustat['Group Number'].max()))
-# compustat = compustat.safe_index(['Permco', 'Fiscal Year', 'Group Number'])
-# cashflow_groups = compustat[yearly_variables].groupby(['Permco', 'Fiscal Year', 'Group Number'])
-# with Pool(4) as p:
-#     new_dataframes = p.map(cash_flow, yearly_variables)
-
-# Assign the new variables
-# for d in new_dataframes:
-#     compustat[d.name] = d
-
-# compustat = compustat.drop(['Group Number'], axis = 1)
 
 ################ Data Integrity ################
 
@@ -152,7 +140,7 @@ print(duplicated_values)
 assert(duplicated_values.shape[0] == 0)
 
 # Check that dates are contiguous
-valid_returns = compustat.groupby(by = ['Permco']).apply(continuous_index)
+valid_returns = parallel_apply(compustat, ['Permco'], continuous_index, 2, None)
 discontinuous_returns = valid_returns.loc[~valid_returns]
 print('Companies without continuous dates')
 print(discontinuous_returns)

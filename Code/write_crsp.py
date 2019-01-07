@@ -81,6 +81,9 @@ def agg_share_classes(company_on_date):
     :param company_on_date - a dataframe from a pandas groupby object with all the variables inside ALL_CRSP_VAR
     :return a dataframe with one row that has all the variables in ALL_CRSP_VAR, agrgregated across the share classes
     """
+
+    company_on_date.safe_drop(['_Group'], inplace = True) # Addition to make it work well with the parallel process
+
     # If only one share class
     if company_on_date.shape[1] <= 1:
         return company_on_date[ALL_CRSP_VAR]
@@ -125,7 +128,7 @@ problem_children = crsp_merge.loc[~pd.isnull(crsp_merge['Count']), ALL_CRSP_VAR]
 
 if problem_children.shape[0] > 0:
     good_children = crsp_merge.loc[pd.isnull(crsp_merge['Count']), ALL_CRSP_VAR]
-    merged_problems = parallel_apply(problem_children, ['Permco', 'datadate'], agg_share_classes, cpu_count(), 10000)
+    merged_problems = parallel_apply(problem_children, ['Permco', 'datadate'], agg_share_classes, 2, None)
     merged_problems = merged_problems[ALL_CRSP_VAR]
 
     # Combine the dataframes together again
@@ -149,8 +152,7 @@ print(duplicated_values)
 assert(duplicated_values.shape[0] == 0)
 
 # Continuity of returns
-# valid_returns = crsp_merge.groupby(by = ['Permco']).apply(continuous_index)
-valid_returns = parallel_apply(crsp_merge, ['Permco'], continuous_index, cpu_count(), 10000)
+valid_returns = parallel_apply(crsp_merge, ['Permco'], continuous_index, 2, None)
 discontinuous_returns = valid_returns.loc[~valid_returns]
 print('Companies without continuous returns')
 print(discontinuous_returns)
