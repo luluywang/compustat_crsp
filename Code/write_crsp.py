@@ -159,3 +159,6 @@ assert(discontinuous_returns.shape[0] == 0)
 ################
 print_message('Outputting Data')
 crsp_merge.to_hdf('../Output/crsp.h5', 'crsp')
+
+with open('../Logs/crsp.log', 'w') as f:
+    f.write('Raw CRSP file has been written')

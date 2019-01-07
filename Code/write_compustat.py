@@ -95,8 +95,51 @@ def select_least_missing(dataframe):
     dataframe['Missing Count'] = dataframe.isnull().sum(axis = 1)
     dataframe.sort_values(by = ['Missing Count'], ascending = True, inplace = True)
     return dataframe.iloc[0, :]
-
 compustat = parallel_apply(compustat, ['Permco', 'datadate'], select_least_missing, cpu_count(), 10000)
+
+################ Reshaping the Annual Data ################
+print_message('Converting yearly to quarterly data')
+yearly_variables = sorted([compustat_names[x] for x in list(compustat_names.keys()) if x[-1] == 'y'])
+
+def take_diffs(x):
+    """
+    Takes a Series of a "year to date" variable and converts it into a quarterly variable
+
+    param x: a Series of a year to date variable, e.g. capex year to date
+    :return: a Series of the quarterly variable
+    """
+
+    if all(np.isnan(x)):
+        return x
+
+    x = x.fillna(0)
+    ret = x.diff()
+    ret[0] = x[0]
+    return ret
+
+def take_diff_across_columns(dataframe):
+    ret = dataframe.transform(take_diffs)
+    return ret
+
+compustat = compustat.safe_index(['Permco', 'datadate', 'Fiscal Year'])
+compustat_yearly = compustat.loc[:, yearly_variables]
+compustat_yearly = parallel_apply(compustat_yearly, ['Permco', 'Fiscal Year'], take_diff_across_columns, cpu_count(), 10000)
+compustat[yearly_variables] = compustat_yearly
+print_message('Finished parallel process')
+
+# compustat = compustat.safe_index(['Permco', 'Fiscal Year'])
+# compustat['Group Number'] = compustat.groupby(['Permco', 'Fiscal Year']).ngroup()
+# print('Maximum Group Number: ' + str(compustat['Group Number'].max()))
+# compustat = compustat.safe_index(['Permco', 'Fiscal Year', 'Group Number'])
+# cashflow_groups = compustat[yearly_variables].groupby(['Permco', 'Fiscal Year', 'Group Number'])
+# with Pool(4) as p:
+#     new_dataframes = p.map(cash_flow, yearly_variables)
+
+# Assign the new variables
+# for d in new_dataframes:
+#     compustat[d.name] = d
+
+# compustat = compustat.drop(['Group Number'], axis = 1)
 
 ################ Data Integrity ################
 
@@ -118,3 +161,6 @@ assert(discontinuous_returns.shape[0] == 0)
 ################ Outputting Data ################
 print_message('Outputting Data')
 compustat.to_hdf('../Output/compustat.h5', 'compustat')
+
+with open('../Logs/compustat.log', 'w') as f:
+    f.write('Raw Compustat file has been written')

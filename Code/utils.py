@@ -103,7 +103,7 @@ def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
 
     :param df: the pandas dataframe that needs to be grouped
     :param group_list: a list of variable names to group by
-    :param f: the function to apply to each group
+    :param f: the function that operates on dataframes to apply to each grouped dataframe
     :param num_cores: the number of cores to use
     :param print_every_n: a message will be printed every print_every_n groups processed by
     each core. If print_every_n = None, then no messages will be printed
@@ -166,7 +166,8 @@ def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
     ret = pd.concat(parallel_results)
 
     df.safe_drop(['_Group'], inplace = True)
-    ret.safe_drop(['_Group'], inplace = True)
+    if len(ret.shape) > 1:
+        ret.safe_drop(['_Group'], inplace = True)
 
     return ret
 
