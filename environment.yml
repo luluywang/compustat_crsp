@@ -1,0 +1,11 @@
+name: death-of-factors
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pandas
+  - numpy
+  - scipy
+  - pytables
+  - ipywidgets
+  - beakerx
