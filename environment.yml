@@ -9,3 +9,6 @@ dependencies:
   - pytables
   - ipywidgets
   - beakerx
+  - statsmodels
+  - seaborn
+  - multiprocess
