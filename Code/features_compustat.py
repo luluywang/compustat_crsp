@@ -6,8 +6,10 @@ compustat = pd.read_hdf('../Output/compustat.h5', 'compustat')
 
 # Make some variables
 print('Making features')
-compustat['Market Cap (Compustat)'] = compustat['Price (Compustat)'] * \
-                                      compustat['Shares Outstanding (Compustat)'] / 1e3
+compustat['Market Cap (Compustat)'] = compustat['Price (Compustat)'] * compustat['Shares Outstanding (Compustat)'] / 1e3
+
+
+
 compustat['Shareholder Equity, Total'] = np.select(compustat['Shareholder Equity, Total'].isnull(), \
                                                    compustat['Common Equity, Total'] + compustat['Preferred Equity, Total'], compustat['Shareholder Equity, Total'])
 compustat['Shareholder Equity, Total'] = np.select(compustat['Shareholder Equity, Total'].isnull(), \

@@ -15,9 +15,16 @@ crsp = pd.read_hdf('../Output/crsp.h5')
 compustat = pd.read_hdf('../Output/compustat.h5')
 
 compustat_variables = compustat.columns.tolist()
-
 print_message('Merging')
-merged = crsp.join(compustat, how = 'left', lsuffix = '.crsp', rsuffix = '.comp')
+merged = crsp.join(compustat, how = 'left', rsuffix = '.comp') # Use crsp data by default
+
+# Combine some variables
+# missing = lambda s: pd.isnull(merged[s])
+# merged.loc[missing('Company Name'), 'Company Name'] = merged['Company Name.crsp']
+# merged.safe_drop(['Company Name.crsp'], inplace = True)
+
+print('Final Variables')
+print(merged.columns.tolist())
 
 print_message('Filling NAs')
 merged = merged.groupby(by = ['Permco']).fillna(method = 'ffill')

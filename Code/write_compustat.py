@@ -96,7 +96,9 @@ def select_least_missing(dataframe):
     dataframe['Missing Count'] = dataframe.isnull().sum(axis = 1)
     dataframe.sort_values(by = ['Missing Count'], ascending = True, inplace = True)
     return dataframe.iloc[0, :]
-compustat = parallel_apply(compustat, ['Permco', 'datadate'], select_least_missing, 2, 10000)
+
+compustat = parallel_apply(compustat, ['Permco', 'datadate'], select_least_missing, 2, None)
+print_message('Finished parallel process')
 
 ################ Reshaping the Annual Data ################
 print_message('Converting yearly to quarterly data')
@@ -112,7 +114,6 @@ def take_diffs(x):
 
     if all(np.isnan(x)):
         return x
-
     x = x.fillna(0)
     ret = x.diff()
     ret[0] = x[0]
@@ -125,9 +126,9 @@ def take_diff_across_columns(dataframe):
 
 compustat = compustat.safe_index(['Permco', 'datadate', 'Fiscal Year'])
 compustat_yearly = compustat.loc[:, yearly_variables]
-compustat_yearly = parallel_apply(compustat_yearly, ['Permco', 'Fiscal Year'], take_diff_across_columns, 2, None)
-compustat[yearly_variables] = compustat_yearly
-print_message('Finished parallel process')
+
+# compustat_yearly = parallel_apply(compustat_yearly, ['Permco', 'Fiscal Year'], take_diff_across_columns, 2, None)
+compustat[yearly_variables] = compustat[yearly_variables].groupby(['Permco', 'Fiscal Year']).transform(take_diffs)
 
 ################ Data Integrity ################
 

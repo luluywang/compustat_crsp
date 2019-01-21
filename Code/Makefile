@@ -20,5 +20,5 @@ $(L)/compustat.log: $(D)/compustat-merged.txt write_compustat.py
 $(O)/compustat.h5: $(L)/compustat.log write_compustat.py
 	python features_compustat.py
 
-$(O)/merged.h5: $(O)/crsp.h5 $(O)/compustat.h5
+$(O)/merged.h5: $(O)/crsp.h5 $(O)/compustat.h5 merge_crsp_compustat.py
 	python merge_crsp_compustat.py

@@ -5,9 +5,9 @@ from datetime import datetime
 matplotlib.use("TkAgg")
 from multiprocess import Pool, cpu_count
 import numpy as np
+import scipy as sci
 # import seaborn as sns
 # import matplotlib.pyplot as plt
-# import scipy as sci
 # from copy import copy
 
 
@@ -73,14 +73,14 @@ def continuous_index(company_dataframe, num_months = 1):
     :param num_months -- the maximum number of months between timestamps
     :returns True or False, depending on whether the return sequence is continuous
     """
-    times = company_dataframe.index.get_level_values(1)
+    times = company_dataframe.index.get_level_values('datadate')
     diffs = times.shift(1, freq = 'M') - times
     return (diffs.max().total_seconds() < 32 * num_months * 24 * 60 * 60)
 
 def print_message(text):
     print('=====' + text + ' (' + str(datetime.now()) + ') =====')
 
-def safe_index(self, variable_list):
+def safe_index(self, variable_list, **kwargs):
     """
     Function that makes setting an index easier. Often times the existing index
     already contains some variables.
@@ -88,7 +88,7 @@ def safe_index(self, variable_list):
     :param variable_list: a list of strings containing the new index names
     :return:
     """
-    return self.reset_index().set_index(variable_list)
+    return self.reset_index().set_index(variable_list, **kwargs)
 pd.DataFrame.safe_index = safe_index
 
 def safe_drop(self, variable_list, **kwargs):
@@ -97,7 +97,7 @@ def safe_drop(self, variable_list, **kwargs):
 pd.DataFrame.safe_drop = safe_drop
 
 
-def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
+def parallel_apply(df, group_list, f, num_cores, print_every_n=1000, **kwargs):
     """
     A lightweight version of apply using the multiprocess library
 
@@ -140,6 +140,7 @@ def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
     for ind in range(num_cores - 1):
         cuts.append(
             df.loc[(group_numbers >= group_cuts[ind]) & (group_numbers < group_cuts[ind + 1])].groupby(group_list))
+
     cuts.append(df.loc[(group_numbers >= group_cuts[num_cores - 1]) & (group_numbers <= group_cuts[num_cores])].groupby(
         group_list))
 
@@ -148,14 +149,15 @@ def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
         curr = dataframe['_Group'].values[0]
         if curr % print_every_n == 0:
             print('Group: ' + str(curr))
-        return f(dataframe)
+        return f(dataframe, **kwargs)
 
     def verbose_func_to_apply(group_by_object):
         return group_by_object.apply(verbose_function)
 
     def silent_func_to_apply(group_by_object):
-        return group_by_object.apply(f)
+        return group_by_object.apply(f, **kwargs)
 
+    print('Mapping over: ' + str(len(cuts)) + ' cores')
     with Pool(num_cores) as p:
         if print_every_n != None:
             parallel_results = p.map(verbose_func_to_apply, cuts)
@@ -170,3 +172,52 @@ def parallel_apply(df, group_list, f, num_cores, print_every_n=1000):
 
     return ret
 
+def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
+    """ Very close to numpy.percentile, but supports weights.
+    NOTE: quantiles should be in [0, 1]!
+    :param values: numpy.array with data
+    :param quantiles: array-like with many quantiles needed
+    :param sample_weight: array-like of the same length as `array`
+    :param values_sorted: bool, if True, then will avoid sorting of initial array
+    :param old_style: if True, will correct output to be consistent with numpy.percentile.
+    :return: numpy.array with computed quantiles.
+
+    Usage:
+
+    x = [-5, 1, 2, 2, 10]
+    assert(weighted_quantile(x, [0.5]) == np.percentile(x, [50]))
+    assert(weighted_quantile(x, [0]) == np.min(x))
+    assert(weighted_quantile(x, [1]) == np.max(x))
+    assert(np.all(weighted_quantile(x, [0, 0.25, 0.5, 0.75, 1]) == weighted_quantile(x[0:2] + x[3:], [0, 0.25, 0.5, 0.75, 1], [1, 1, 2, 1])))
+    """
+
+    values = np.array(values)
+    quantiles = np.array(quantiles)
+    if sample_weight is None:
+        sample_weight = np.ones(len(values))
+    sample_weight = np.array(sample_weight)
+    assert np.all(quantiles >= 0) and np.all(quantiles <= 1), 'quantiles should be in [0, 1]'
+
+    if not values_sorted:
+        sorter = np.argsort(values)
+        values = values[sorter]
+        sample_weight = sample_weight[sorter]
+
+    weighted_quantiles = np.cumsum(sample_weight)
+    weighted_quantiles = weighted_quantiles / weighted_quantiles[-1]
+    return sci.interpolate.interp1d(weighted_quantiles, values, kind = 'next', bounds_error = False, fill_value = (np.min(values), np.max(values)))(quantiles)
+
+# Write a few test cases to demonstrate behavior
+def winsorize_at_explicit_input(x, lower_bound, upper_bound):
+    """
+    Winsorizes the array x at the lower_bound and upper_bound.
+
+    :param x: a numpy array-like object
+    :param lower_bound: a scalar for the lower bound
+    :param upper_bound: a scalar for the upper bound
+    :return: the winsorized array
+    """
+    ret = x
+    ret[x < lower_bound] = lower_bound
+    ret[x > upper_bound] = upper_bound
+    return ret
